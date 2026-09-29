@@ -89,3 +89,28 @@ Record with it:
 - **US test:** if ≥40% of calls name the US as their 2027 market, the mid-October sprint goes US-first (Melodi / Dror for US doors).
 - **Parked direction:** selling Israel to foreign fintechs becomes the mid-October sprint if partners (Thunes, Salt Edge, Eko) produce ≥5 warm intros to people who own Israel at foreign fintechs by Oct 14.
 - **Open items:** cross-check doors against the LinkedIn Messages export; Google Contacts export; add the persona and signal rules to target-profile.md (needs Amos's OK).
+
+### Run #2 — 2026-09-29
+- **Direction:** D1 (Israel-HQ fintech/payments that sell abroad) and D4 (incumbents' new units) combined. Discount-group doors held. Founder pull accepted.
+- **Pool:** 102 roster doors (41 WARM, 61 KNOWN-senior). Web-checked for a dated signal and the M&A gate.
+- **List:**
+  - 13 rows passed the gates (7 WARM, 6 KNOWN), 2 short of the 15-row floor. Not padded.
+  - 11 rows are in "No dated signal / No route yet", mostly WARM connectors and investors with no dated trigger.
+  - 14 groups are excluded or held.
+  - Sheet: "Outreach sprint #2 — 2026-09-29" in Drive › customers and pipeline.
+- **Top rows:**
+  - Global-e 8 = fit2 + signal2 + door2 + role2
+  - ThetaRay 7 = 2+1+2+2
+  - Mastercard IL 7 = 1+2+2+2
+  - Riskified 7 = 2+2+1+2
+- **Gate kills this run:**
+  - M&A: Payoneer (Nuvei, 2026-06-15), BioCatch (Visa, 2026-08-03), Papaya (sale talks).
+  - Cal competitor plus M&A: esh (Isracard).
+  - Held: Leumi (Micha overlap), until Amos decides.
+- **Pass/fail (set before the first send):**
+  - Sends Oct 4–8.
+  - By Oct 22: replies ≥ round(0.4·7 + 0.1·6) = **3**; calls ≥ round(0.25·7 + 0.05·6) = **2**.
+  - By Nov 12: ≥1 proposal requested.
+  - If rows are added from "No dated signal" before the first send, recompute the thresholds with the same formula and log the reason.
+- **US test (carried over):** if ≥40% of calls name the US as the 2027 market, the next sprint goes US-first via Dror.
+- **Lesson:** 5 of 13 rows have role 0. The WARM doors in this segment sit below the expansion owner, so most sends are pointer asks. If replies arrive with no calls, the door is wrong, not the opener.
