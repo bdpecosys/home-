@@ -1,6 +1,6 @@
 # Outreach sprint — process spec v0
 
-*Created 2026-09-27 from run #1. Template now; becomes the `bdp-outreach-sprint` skill after run #2 (engine rule: template after the first run, skill on the second use).*
+*Created 2026-09-27 from run #1. Extracted into `.claude/skills/bdp-outreach-sprint/` on 2026-09-29, after run #2. The skill is now the method; this file keeps the run log and the build-eval verdicts. Directions config for runs 1–2: `sprint/directions_2026-09.json`.*
 
 ## Purpose
 - **Trigger:** a waiting moment (one deal gates the thesis), a thin pipeline, or the urge to build instead of sell.
@@ -114,3 +114,19 @@ Record with it:
   - If rows are added from "No dated signal" before the first send, recompute the thresholds with the same formula and log the reason.
 - **US test (carried over):** if ≥40% of calls name the US as the 2027 market, the next sprint goes US-first via Dror.
 - **Lesson:** 5 of 13 rows have role 0. The WARM doors in this segment sit below the expansion owner, so most sends are pointer asks. If replies arrive with no calls, the door is wrong, not the opener.
+- **Revision before the first send (2026-09-29, logged per the hard rule):**
+  - **What happened:** a full scan of every pipeline tab (xlsx export, `in_motion_scan.py`) found 5 listed companies already in motion: Justt (meeting set), Vayu (1st meeting set), Pontera, Mastercard IL (reached out) and Nayax (reached out). It also moved 4 "No dated signal" people to Excluded, because their threads are live (PassportCard, Wiserpay, Intuit, Meitav).
+  - **Cause:** the Drive text reader returns one sample row per tab, and run #2 trusted it.
+  - **List now:** **8 rows (4 WARM, 4 KNOWN)**.
+  - **Thresholds recomputed** with the same formula: replies ≥ round(0.4·4 + 0.1·4) = **2**; calls ≥ round(0.25·4 + 0.05·4) = **1**, by Oct 22. Still ≥1 proposal requested by Nov 12.
+  - **Sheets:** the sheet of record is "Outreach sprint #2 — 2026-09-29 (v2)". The original is renamed "SUPERSEDED, do not send".
+- **Run #2 results:**
+  - direction D1+D4, 102 doors → 13 draft rows → 8 sendable;
+  - gate kills: 4 M&A or client-competitor, 9 in motion found late, plus the held groups;
+  - 0 sends as of 2026-09-29 (holiday week; window Oct 4–8).
+- **Lessons folded into the skill:**
+  - scan the whole pipeline workbook before any research;
+  - yield is about 1 sendable row per 13 doors;
+  - WARM doors often sit below the expansion owner, so ask for a pointer;
+  - check M&A before drafting.
+- **Skill extraction ahead of its pass test:** the build-eval pass test (run #1 ≥15 sends in 5 days, ≥3 calls in 14) is unmet and still open: 3 sends so far. Extracted on the founder's explicit request, 2026-09-29. Re-check at the run #1 day-10 review, Oct 9. If run #1 fails, the skill stays, but the failure diagnostic is logged against it.

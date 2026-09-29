@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
 """Stage 0 of the outreach sprint: build the warm roster (one-off script, not a system).
 
-Warmth = evidence, not connection. Reads raw exports from data/ (gitignored),
-writes data/roster.csv, data/roster_sheet.csv (no emails), data/match_review.csv
-and prints counts only. Message content is never read into any output.
+Warmth = evidence, not connection. Reads raw exports from the data dir (keep it gitignored),
+writes roster.csv, roster_sheet.csv (no emails), match_review.csv and roster_summary.json,
+and prints counts only. Message content is dropped on load and never reaches any output.
 
-Inputs (all in data/):
-  Connections.csv          LinkedIn export (3-line notes preamble before the header)
-  messages.csv|messages.zip  LinkedIn messages export (optional; zip holds messages.csv)
-  contacts.csv             Google Contacts export
-  other_contacts.csv       Google "Other contacts" export
-  aug31_set.csv            Aug 31 contact set (hand tags in column "Tag")
-  calendar/*.json          Calendar connector list_events pages (primary, last 24 months)
+Inputs (in --data-dir; only Connections.csv is required, missing sources are reported):
+  Connections.csv            LinkedIn export (3-line notes preamble before the header)
+  messages.csv|messages.zip  LinkedIn messages export (zip holds messages.csv)
+  contacts.csv               Google Contacts export
+  other_contacts.csv         Google "Other contacts" export
+  <tags_file>                optional hand-tagged contact set (see config "tags")
+  calendar/*.json            Calendar connector list_events pages (primary calendar)
 
-Usage: python scripts/build_roster.py [--today YYYY-MM-DD]
+Config (--config, default <data-dir>/roster_config.json; copy roster_config.example.json):
+  self_emails         your own addresses (excluded as counterparts)
+  self_email_regex    catches your other/old addresses, e.g. "^you[^@]*@(yourco\\.|oldco\\.com)"
+  self_names          your name in every script you use (drops your own rows)
+  sector_extra_regex  company names that should count as in-sector (fs_company = Y)
+  sector_exclude_regex  words that veto the sector flag (VCs, cyber firms)
+  tags                {"file", "url_col", "tag_col", "name_col", "company_cols", "title_col", "warm_values"}
+
+Usage: python build_roster.py --data-dir data [--config FILE] [--today YYYY-MM-DD]
+                              [--lookback-days 730] [--max-attendees 8]
 """
 import argparse
 import glob
@@ -29,20 +38,21 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
-MY_EMAILS = {"amos@bdpartners.co", "moscantel@gmail.com"}
-SELF_NAMES = {"amos avner", "עמוס אבנר"}
+# Set from CLI/config in main(); module-level so the helpers stay simple.
+DATA = "data"
+MY_EMAILS, SELF_NAMES, SELF_RE = set(), set(), None
+LOOKBACK_DAYS = 730  # "recent" evidence window (24 months)
 MAX_MEETING_ATTENDEES = 8  # larger invites (webinars, all-hands) are not relationship evidence
-FS_PATTERN = re.compile(
+TAGS = {"file": "", "url_col": "LinkedIn", "tag_col": "Tag", "name_col": "Contact name",
+        "company_cols": ["Company"], "title_col": "Title", "warm_values": ["warm", "hot"]}
+# Generic sector keywords only; named companies go in config "sector_extra_regex".
+FS_BASE = (
     r"bank|banc|pay|fintech|financ|credit|card|insur|invest|securities|trading|lending|loan|"
-    r"wallet|remit|acquir|clearing|forex|\bfx\b|crypto|blockchain|wealth|asset management|discount capital|melodicapital|leumi partners|"
-    r"brokerage|exchange|visa\b|mastercard|american express|amex|paypal|stripe|adyen|isracard|\bmax\b|"
-    r"\bcal\b|leumi|hapoalim|poalim|discount|mizrahi|tefahot|\bfibi\b|jerusalem bank|union bank|"
-    r"payoneer|tipalti|rapyd|nuvei|pagaya|lemonade|thunes|bridgerpay|melio|sunbit|hippo|next insurance|"
-    r"phoenix|harel|migdal|clal|menora|ayalon|psagot|meitav|altshuler|ibi\b|excellence|tase|"
-    r"בנק|פיננס|אשראי|ביטוח|השקעות|תשלומים|ישראכרט|מקס|לאומי|הפועלים|דיסקונט|מזרחי",
-    re.I,
+    r"wallet|remit|acquir|clearing|forex|\bfx\b|crypto|blockchain|wealth|asset management|"
+    r"brokerage|exchange|"
+    r"בנק|פיננס|אשראי|ביטוח|השקעות|תשלומים"
 )
+FS_PATTERN = re.compile(FS_BASE, re.I)
 FS_EXCLUDE = re.compile(r"venture|\bvc\b|cyber|security\b", re.I)  # VCs and cyber firms are not FS buyers
 
 # ---------------------------------------------------------------- normalisation
@@ -131,6 +141,17 @@ def emails_of(row, cols):
 # ---------------------------------------------------------------- sources
 
 
+def read_opt(fname):
+    path = os.path.join(DATA, fname)
+    if not os.path.exists(path):
+        MISSING.append(fname)
+        return None
+    return pd.read_csv(path, dtype=str)
+
+
+MISSING = []
+
+
 def load_connections():
     df = pd.read_csv(os.path.join(DATA, "Connections.csv"), skiprows=3, dtype=str)
     df = df[df["URL"].notna()]
@@ -155,6 +176,7 @@ def open_messages():
         with zipfile.ZipFile(z) as zf:
             name = next(n for n in zf.namelist() if n.lower().endswith("messages.csv"))
             return pd.read_csv(io.BytesIO(zf.read(name)), dtype=str)
+    MISSING.append("messages.csv|messages.zip")
     return None
 
 
@@ -205,7 +227,9 @@ def load_google():
     """Google Contacts + Other contacts, merged with each other by email."""
     persons = []
     for fname, saved in (("contacts.csv", True), ("other_contacts.csv", False)):
-        df = pd.read_csv(os.path.join(DATA, fname), dtype=str)
+        df = read_opt(fname)
+        if df is None:
+            continue
         ecols = [c for c in df.columns if c.startswith("E-mail") and c.endswith("Value")]
         pcols = [c for c in df.columns if c.startswith("Phone") and c.endswith("Value")]
         for _, r in df.iterrows():
@@ -247,7 +271,7 @@ def load_google():
 
 
 def load_calendar(today):
-    since = today - timedelta(days=730)
+    since = today - timedelta(days=LOOKBACK_DAYS)
     per = defaultdict(lambda: {"count": 0, "last": None, "display": ""})
     events = 0
     seen = set()
@@ -278,15 +302,19 @@ def load_calendar(today):
     return events, dict(per)
 
 
-def load_aug31():
-    df = pd.read_csv(os.path.join(DATA, "aug31_set.csv"), dtype=str)
+def load_tags():
+    """Optional hand-tagged set keyed by LinkedIn URL (column names come from config "tags")."""
+    df = read_opt(TAGS["file"]) if TAGS.get("file") else None
     out = {}
+    if df is None:
+        return out
+    txt = lambda r, c: r.get(c).strip() if c and isinstance(r.get(c), str) else ""
     for _, r in df.iterrows():
-        u = norm_url(r.get("LinkedIn"))
-        tag = (r.get("Tag") or "").strip().lower() if isinstance(r.get("Tag"), str) else ""
+        u = norm_url(r.get(TAGS["url_col"]))
         if u:
-            out[u] = {"tag": tag, "name": r.get("Contact name") or "", "company": r.get("Contact employer") or r.get("Company") or "",
-                      "title": r.get("Title") or ""}
+            out[u] = {"tag": txt(r, TAGS["tag_col"]).lower(), "name": txt(r, TAGS["name_col"]),
+                      "company": next((txt(r, c) for c in TAGS["company_cols"] if txt(r, c)), ""),
+                      "title": txt(r, TAGS["title_col"])}
     return out
 
 
@@ -351,7 +379,7 @@ class NameIndex:
 
 def score(p, today):
     parts, strong = [], False
-    cutoff = today - timedelta(days=730)
+    cutoff = today - timedelta(days=LOOKBACK_DAYS)
     if p["li_two_way"] == "Y":
         recent = p["li_last_msg"] is not None and p["li_last_msg"].to_pydatetime().replace(tzinfo=timezone.utc) >= cutoff
         parts.append(("li_2way" if recent else "li_2way_old", 2 if recent else 1))
@@ -364,8 +392,8 @@ def score(p, today):
     if p["cal_meetings"]:
         parts.append(("meeting", 2))
         strong = True
-    if p["aug31_tag"] in ("warm", "hot"):
-        parts.append(("tag_" + p["aug31_tag"], 2))
+    if p["tag"] in TAGS["warm_values"]:
+        parts.append(("tag_" + p["tag"], 2))
         strong = True
     total = sum(v for _, v in parts)
     breakdown = f"{total} = " + " + ".join(f"{k}{v}" for k, v in parts) if parts else "0"
@@ -374,13 +402,12 @@ def score(p, today):
 
 
 def is_self(e):
-    local, _, dom = e.lower().partition("@")
-    return (e.lower() in MY_EMAILS or local in ("amos.avner", "amosavner")
-            or (local.startswith("amos") and (dom.startswith("bdpartners.") or dom == "startup-east.com")))
+    e = e.lower()
+    return e in MY_EMAILS or bool(SELF_RE and SELF_RE.search(e))
 
 
 def handle_name(e):
-    """'nir.klaiman@x' -> 'Nir Klaiman'; '' when the handle is not clearly first+last."""
+    """'jane.doe@x' -> 'Jane Doe'; '' when the handle is not clearly first+last."""
     toks = [t for t in re.split(r"[._\-]+", re.sub(r"\d+", "", e.split("@")[0])) if len(t) >= 2]
     return " ".join(t.capitalize() for t in toks) if len(toks) >= 2 else ""
 
@@ -401,8 +428,26 @@ def mask(e):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--data-dir", default="data")
+    ap.add_argument("--config", default="")
     ap.add_argument("--today", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    ap.add_argument("--lookback-days", type=int, default=730)
+    ap.add_argument("--max-attendees", type=int, default=8)
     args = ap.parse_args()
+    global DATA, MY_EMAILS, SELF_NAMES, SELF_RE, LOOKBACK_DAYS, MAX_MEETING_ATTENDEES, FS_PATTERN, FS_EXCLUDE
+    DATA, LOOKBACK_DAYS, MAX_MEETING_ATTENDEES = args.data_dir, args.lookback_days, args.max_attendees
+    cfg_path = args.config or os.path.join(DATA, "roster_config.json")
+    cfg = json.load(open(cfg_path, encoding="utf-8")) if os.path.exists(cfg_path) else {}
+    if not cfg:
+        print(f"WARNING: no config at {cfg_path}: your own rows will not be filtered")
+    MY_EMAILS = {e.lower() for e in cfg.get("self_emails", [])}
+    SELF_NAMES = {norm_name(n) for n in cfg.get("self_names", [])}
+    SELF_RE = re.compile(cfg["self_email_regex"], re.I) if cfg.get("self_email_regex") else None
+    TAGS.update(cfg.get("tags", {}))
+    if cfg.get("sector_extra_regex"):
+        FS_PATTERN = re.compile(FS_BASE + "|" + cfg["sector_extra_regex"], re.I)
+    if cfg.get("sector_exclude_regex"):
+        FS_EXCLUDE = re.compile(cfg["sector_exclude_regex"], re.I)
     today = datetime.strptime(args.today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
     # 1. LinkedIn people = connections + message counterparts
@@ -422,8 +467,8 @@ def main():
         p["li_msgs_from_me"], p["li_msgs_from_them"] = s["from_me"], s["from_them"]
         p["li_first_msg"], p["li_last_msg"] = s["first"], s["last"]
 
-    # 2. Aug 31 tags (keyed by LinkedIn URL)
-    aug = load_aug31()
+    # 2. Hand tags (keyed by LinkedIn URL)
+    aug = load_tags()
     aug_unmatched = 0
     for url, a in aug.items():
         p = by_url.get(url)
@@ -433,8 +478,8 @@ def main():
                  "emails": set(), "li_connected_on": None, "is_connection": False, "src": set()}
             people.append(p)
             by_url[url] = p
-        p["src"].add("aug31")
-        p["aug31_tag"] = a["tag"]
+        p["src"].add("tags")
+        p["tag"] = a["tag"]
 
     n_linkedin = len(people)
     email_to_li = {e: i for i, p in enumerate(people) for e in p["emails"]}
@@ -530,7 +575,7 @@ def main():
             "g_saved_contact": "Y" if p.get("g_saved") else "N", "g_has_phone": "Y" if p.get("g_phone") else "N",
             "g_other_contact": "Y" if p.get("g_other") else "N",
             "cal_meetings": p.get("cal_meetings", 0), "cal_last_meeting": p.get("cal_last"),
-            "aug31_tag": p.get("aug31_tag", ""), "sources": ";".join(sorted(p["src"])),
+            "tag": p.get("tag", ""), "sources": ";".join(sorted(p["src"])),
             "match_method": p.get("match_method", ""), "match_confidence": p.get("match_confidence", ""),
             "fs_company": "Y" if isinstance(p["company"], str) and FS_PATTERN.search(p["company"])
                                 and not FS_EXCLUDE.search(p["company"]) else "N",
@@ -551,14 +596,18 @@ def main():
     summary = {
         "people": len(df), "tiers": df["tier"].value_counts().to_dict(),
         "linkedin_people": n_linkedin, "messages": msg_meta or "MISSING (data/messages.csv or .zip not found)",
-        "message_counterparts": len(msg), "aug31_rows": len(aug), "aug31_not_in_connections": aug_unmatched,
+        "message_counterparts": len(msg), "tag_rows": len(aug), "tags_not_in_connections": aug_unmatched,
+        "missing_inputs": MISSING,
+        # freshness: the newest evidence each source carries (file dates are only download dates)
+        "latest_evidence": {"li_connected_on": df["li_connected_on"].max(), "li_last_msg": df["li_last_msg"].max(),
+                            "cal_last_meeting": df["cal_last_meeting"].max()},
         "google_people": len(google), "google_match": {k[7:]: v for k, v in stats.items() if k.startswith("google_")},
         "calendar_events_counted": n_events, "calendar_attendees": len(cal),
         "calendar_match": {k[4:]: v for k, v in stats.items() if k.startswith("cal_")},
         "low_confidence_listed": sum(r["merged"] == "N" for r in review),
         "medium_merged_listed": sum(r["merged"] == "Y" for r in review),
         "source_contribution": {s: int(df["sources"].str.contains(s).sum()) for s in
-                                ("li_connection", "li_messages", "g_contacts", "g_other", "calendar", "aug31")},
+                                ("li_connection", "li_messages", "g_contacts", "g_other", "calendar", "tags")},
     }
     json.dump(summary, open(os.path.join(DATA, "roster_summary.json"), "w"), indent=1, default=str)
     print(json.dumps(summary, indent=1, default=str))

@@ -1,0 +1,14 @@
+{
+ "_note": "Run #1-2 directions (2026-09). Method config, not data: company regexes only.",
+ "in_motion_regex": "micha motlis|\\bcal[- ]platform|\\bcal\\b|isracard|ישראכרט|\\bmax\\b|max\\.co\\.il|max it|thunes|transferto|bridgerpay|melodicapital|melodi|xenaris|\\beko\\b|eko\\.co\\.in",
+ "hold_regex": "discount|paybox|dcapital|tafnit",
+ "directions": {
+  "D1 Second Cal, buyer picks market": "payoneer|rapyd|nayax|tipalti|papaya global|melio|sunbit|biocatch|thetaray|riskified|pagaya|lemonade|wiserpay|okoora|payem|pontera|justt|nilus|candex|sapiens|actimize|global-e|etoro|plus500|au10tix|personetics|earnix|fundbox|bluevine|forter|fireblocks|pomvom|be the bank|lucid financials|kolleno|cedar money|next insurance|passportcard|davidshield|mera-fintech|getneema|neema|dokka|trafix|withvayu|vayu",
+  "D2 Second Cal, US only": null,
+  "D3 Sell Israel to foreign fintech infra": "payroc|terrapay|moneythor|salt ?edge|riverty|adyen|checkout\\.com|wise\\.com|wise payments|unipaas|flagright|lido finance|amara exchange|chainalysis|iserveu|revolut|airwallex|visionaryarc|traild|nuvei|simplex|valley bank|state bank of india|dbs bank|bank of singapore",
+  "D4 Israeli incumbents' new units": "leumi|hapoalim|poalim|discount|mizrahi|shva|automated banking|tefahot|fibi|first international|one zero|\\besh\\b|paybox|migdal|clal|harel insurance|menora|phoenix|meitav|altshuler|psagot|\\bibi\\b|more investment|tafnit|check point|hibob|fiverr|intuit|citi|mastercard|visa\\b|j\\.?p\\.? ?morgan|jpmorgan|paypal|barclays|stripe|bankleumi|dcapital|wix",
+  "D5 Singapore / India": "\\bpte\\b|singapore|\\bsg\\b|india|private limited|\\bnus\\b|\\bsmu\\b|\\bntu\\b|nanyang|\\bedb\\b|govtech|temasek|\\bgrab\\b|iserveu|\\bdbs\\b|ocbc|\\buob\\b|\\.sg$|\\.in$|\\.co\\.in$",
+  "E1 Big-4 & advisory referral channel": "\\bpwc\\b|\\bey\\b|ernst|kpmg|deloitte|\\bbdo\\b|dun & bradstreet|law firm|\\blaw\\b|\\badv\\b|advocates|pollak|matalon|herzog|kyprianou|shibolet|gornitzky|meitar|fischer|barnea|goldfarb|amit, pollak|apm\\.law|roland berger|gartner|mckinsey|\\bbcg\\b|bain",
+  "E2 Israeli cyber & AI-infra scale-ups": "cyber|security|\\bsec\\b|bindsec|guardz|silverfort|check point|xm cyber|cyberpro|legion|valence|zenyard|\\.ai\\b|\\bai\\b|faros|aerospike|datasnipper|camunda|emerix|darrow|tenjin|melingo|conifers|metriko|opeak|arc analytics"
+ }
+}

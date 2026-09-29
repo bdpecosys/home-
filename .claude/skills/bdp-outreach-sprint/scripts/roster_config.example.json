@@ -1,0 +1,16 @@
+{
+ "self_emails": ["you@yourcompany.com", "you.personal@example.com"],
+ "self_email_regex": "^(first\\.?last@|first[^@]*@(yourcompany\\.|previousemployer\\.com$))",
+ "self_names": ["First Last", "Name in second script"],
+ "sector_extra_regex": "named companies that should count as in-sector|separated by pipes",
+ "sector_exclude_regex": "venture|\\bvc\\b|cyber|security\\b",
+ "tags": {
+  "file": "tagged_contacts.csv",
+  "url_col": "LinkedIn",
+  "tag_col": "Tag",
+  "name_col": "Contact name",
+  "company_cols": ["Contact employer", "Company"],
+  "title_col": "Title",
+  "warm_values": ["warm", "hot"]
+ }
+}
