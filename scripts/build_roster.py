@@ -31,10 +31,11 @@ import pandas as pd
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 MY_EMAILS = {"amos@bdpartners.co", "moscantel@gmail.com"}
+SELF_NAMES = {"amos avner", "עמוס אבנר"}
 MAX_MEETING_ATTENDEES = 8  # larger invites (webinars, all-hands) are not relationship evidence
 FS_PATTERN = re.compile(
-    r"bank|banc|pay|fintech|financ|capital|credit|card|insur|invest|securit|trading|lending|loan|"
-    r"wallet|remit|acquir|clearing|forex|\bfx\b|crypto|blockchain|wealth|asset management|fund\b|funds\b|"
+    r"bank|banc|pay|fintech|financ|credit|card|insur|invest|securities|trading|lending|loan|"
+    r"wallet|remit|acquir|clearing|forex|\bfx\b|crypto|blockchain|wealth|asset management|discount capital|melodicapital|leumi partners|"
     r"brokerage|exchange|visa\b|mastercard|american express|amex|paypal|stripe|adyen|isracard|\bmax\b|"
     r"\bcal\b|leumi|hapoalim|poalim|discount|mizrahi|tefahot|\bfibi\b|jerusalem bank|union bank|"
     r"payoneer|tipalti|rapyd|nuvei|pagaya|lemonade|thunes|bridgerpay|melio|sunbit|hippo|next insurance|"
@@ -42,6 +43,7 @@ FS_PATTERN = re.compile(
     r"בנק|פיננס|אשראי|ביטוח|השקעות|תשלומים|ישראכרט|מקס|לאומי|הפועלים|דיסקונט|מזרחי",
     re.I,
 )
+FS_EXCLUDE = re.compile(r"venture|\bvc\b|cyber|security\b", re.I)  # VCs and cyber firms are not FS buyers
 
 # ---------------------------------------------------------------- normalisation
 
@@ -163,6 +165,8 @@ def load_messages():
         return None, {}
     df = df.drop(columns=[c for c in df.columns if c.strip().upper() in ("CONTENT", "SUBJECT")])
     df.columns = [c.strip().upper() for c in df.columns]
+    if "FOLDER" in df.columns:
+        df = df[df["FOLDER"].str.upper() != "SPAM"]
     df["SENDER PROFILE URL"] = df["SENDER PROFILE URL"].map(norm_url)
     me = df["SENDER PROFILE URL"].value_counts().idxmax()
     df["DATE"] = pd.to_datetime(df["DATE"].str.replace(" UTC", ""), errors="coerce")
@@ -207,12 +211,16 @@ def load_google():
         for _, r in df.iterrows():
             name = " ".join(x for x in (r.get("First Name"), r.get("Middle Name"), r.get("Last Name"))
                             if isinstance(x, str)).strip()
-            emails = emails_of(r, ecols) - MY_EMAILS
+            raw = emails_of(r, ecols)
+            emails = {e for e in raw if not is_self(e)}
+            if raw and not emails:
+                continue  # a contact card for one of my own addresses
             if not name and not emails:
                 continue
             persons.append({
-                "name": name or (sorted(emails)[0].split("@")[0] if emails else ""),
-                "company": r.get("Organization Name") if isinstance(r.get("Organization Name"), str) else "",
+                "name": name or (label_for(sorted(emails)[0]) if emails else ""),
+                "company": r.get("Organization Name") if isinstance(r.get("Organization Name"), str)
+                else ("" if name or not emails else sorted(emails)[0].split("@")[1]),
                 "title": r.get("Organization Title") if isinstance(r.get("Organization Title"), str) else "",
                 "emails": emails, "g_saved": saved,
                 "g_phone": saved and any(isinstance(r.get(c), str) and r.get(c).strip() for c in pcols),
@@ -249,10 +257,10 @@ def load_calendar(today):
                 continue
             seen.add(e.get("id"))
             att = [a for a in e.get("attendees", []) if not a.get("resource")]
-            mine = [a for a in att if a.get("self") or a.get("email", "").lower() in MY_EMAILS]
+            mine = [a for a in att if a.get("self") or is_self(a.get("email", ""))]
             if any(a.get("responseStatus") == "declined" for a in mine):
                 continue
-            others = [a for a in att if not a.get("self") and a.get("email", "").lower() not in MY_EMAILS]
+            others = [a for a in att if not a.get("self") and not is_self(a.get("email", ""))]
             if not others or len(att) > MAX_MEETING_ATTENDEES:
                 continue
             st = e.get("start", {})
@@ -365,6 +373,24 @@ def score(p, today):
     return total, breakdown, tier
 
 
+def is_self(e):
+    local, _, dom = e.lower().partition("@")
+    return (e.lower() in MY_EMAILS or local in ("amos.avner", "amosavner")
+            or (local.startswith("amos") and (dom.startswith("bdpartners.") or dom == "startup-east.com")))
+
+
+def handle_name(e):
+    """'nir.klaiman@x' -> 'Nir Klaiman'; '' when the handle is not clearly first+last."""
+    toks = [t for t in re.split(r"[._\-]+", re.sub(r"\d+", "", e.split("@")[0])) if len(t) >= 2]
+    return " ".join(t.capitalize() for t in toks) if len(toks) >= 2 else ""
+
+
+def label_for(e):
+    """Display label for a person known only by email: a name if the handle spells one, else masked."""
+    local, _, dom = e.partition("@")
+    return handle_name(e) or f"{local[:1]}*** @{dom}"
+
+
 def mask(e):
     u, _, d = e.partition("@")
     return (u[:1] + "***@" + d) if d else "***"
@@ -423,6 +449,12 @@ def main():
         method, conf, ids = ("email", "high", [hit]) if hit is not None else (None, None, [])
         if hit is None and g["named"]:
             ids, method, conf = idx.match(g["name"])
+        elif hit is None and handle_name(sorted(g["emails"])[0]):
+            ids, method, conf = idx.match(handle_name(sorted(g["emails"])[0]))
+            if conf == "high":  # a name spelled by an email handle is never better than medium
+                method, conf = "email_handle_name", "medium"
+            elif conf == "medium":
+                method, conf = "email_handle_name", "low"
         stats[f"google_{conf or 'none'}"] += 1
         if conf in ("high", "medium"):
             p = people[ids[0]]
@@ -454,18 +486,27 @@ def main():
     for e, c in cal.items():
         p = email_to_p.get(e)
         how = "email"
-        if p is None and c["display"]:
-            ids, method, conf = idx.match(c["display"])
+        # try the display name (and each side of "עברית - English"), then a name spelled by the email handle
+        tries = [(d.strip(), False) for d in re.split(r"\s+-\s+", c["display"]) if d.strip()] if c["display"] else []
+        tries += [(handle_name(e), True)] if handle_name(e) else []
+        low = None
+        for cand, from_handle in tries if p is None else []:
+            ids, method, conf = idx.match(cand)
+            if from_handle:
+                method, conf = "email_handle_name", {"high": "medium", "medium": "low"}.get(conf, conf)
             if conf in ("high", "medium"):
                 p, how = people[ids[0]], method
                 p.setdefault("match_method", method)
                 p.setdefault("match_confidence", conf)
-            elif conf == "low":
-                review.append({"source": "calendar", "source_name": c["display"], "source_emails": e, "method": method, "merged": "N",
-                               "candidates": " || ".join(f"{people[i]['name']} ({people[i]['company']}) {people[i]['linkedin_url']}" for i in ids)})
+                break
+            if conf == "low" and low is None:
+                low = (cand, method, ids)
+        if p is None and low:
+            review.append({"source": "calendar", "source_name": low[0], "source_emails": e, "method": low[1], "merged": "N",
+                           "candidates": " || ".join(f"{people[i]['name']} ({people[i]['company']}) {people[i]['linkedin_url']}" for i in low[2])})
         if p is None:
             how = "new"
-            p = {"name": c["display"] or e.split("@")[0], "company": e.split("@")[1], "title": "", "linkedin_url": "",
+            p = {"name": c["display"] or label_for(e), "company": e.split("@")[1], "title": "", "linkedin_url": "",
                  "emails": {e}, "li_connected_on": None, "is_connection": False, "src": set()}
             people.append(p)
             email_to_p[e] = p
@@ -491,13 +532,18 @@ def main():
             "cal_meetings": p.get("cal_meetings", 0), "cal_last_meeting": p.get("cal_last"),
             "aug31_tag": p.get("aug31_tag", ""), "sources": ";".join(sorted(p["src"])),
             "match_method": p.get("match_method", ""), "match_confidence": p.get("match_confidence", ""),
-            "fs_company": "Y" if FS_PATTERN.search(f"{p['company']}") else "N",
+            "fs_company": "Y" if isinstance(p["company"], str) and FS_PATTERN.search(p["company"])
+                                and not FS_EXCLUDE.search(p["company"]) else "N",
         }
         r["score"], r["breakdown"], r["tier"] = score(r, today)
         for k in ("li_first_msg", "li_last_msg", "cal_last_meeting"):
             r[k] = r[k].strftime("%Y-%m-%d") if r[k] is not None and pd.notna(r[k]) else ""
         rows.append(r)
-    df = pd.DataFrame(rows).sort_values(["score", "cal_meetings", "li_msgs_from_them"], ascending=False)
+    df = pd.DataFrame(rows)
+    my_url = (msg_meta or {}).get("my_url", "")
+    df = df[~df["name"].map(norm_name).isin(SELF_NAMES) & ((df["linkedin_url"] != my_url) | (my_url == ""))]
+    df["last_evidence"] = df[["li_last_msg", "cal_last_meeting"]].max(axis=1)
+    df = df.sort_values(["score", "last_evidence"], ascending=False).drop(columns="last_evidence")
     df.to_csv(os.path.join(DATA, "roster.csv"), index=False)
     df.drop(columns=["emails"]).to_csv(os.path.join(DATA, "roster_sheet.csv"), index=False)
     pd.DataFrame(review).to_csv(os.path.join(DATA, "match_review.csv"), index=False)
