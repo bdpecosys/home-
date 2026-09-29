@@ -21,3 +21,9 @@ out/
 
 # DB
 *.sqlite
+
+# BDP context pack
+data/
+*.zip
+*.csv
+*.vcf
