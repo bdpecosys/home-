@@ -38,6 +38,8 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
+import history
+
 # Set from CLI/config in main(); module-level so the helpers stay simple.
 DATA = "data"
 MY_EMAILS, SELF_NAMES, SELF_RE = set(), set(), None
@@ -181,7 +183,8 @@ def open_messages():
 
 
 def load_messages():
-    """Per counterpart: msgs_from_me, msgs_from_them, first/last date. Content columns are dropped on load."""
+    """Per counterpart: msgs_from_me, msgs_from_them, first/last date, who spoke last and how many of my
+    messages followed their last one. Content columns are dropped on load."""
     df = open_messages()
     if df is None:
         return None, {}
@@ -192,7 +195,8 @@ def load_messages():
     df["SENDER PROFILE URL"] = df["SENDER PROFILE URL"].map(norm_url)
     me = df["SENDER PROFILE URL"].value_counts().idxmax()
     df["DATE"] = pd.to_datetime(df["DATE"].str.replace(" UTC", ""), errors="coerce")
-    stats = defaultdict(lambda: {"from_me": 0, "from_them": 0, "first": None, "last": None, "name": ""})
+    stats = defaultdict(lambda: {"from_me": 0, "from_them": 0, "first": None, "last": None, "name": "",
+                                 "last_from_me": False, "unanswered": 0})
     skipped_group = 0
     for conv, g in df.groupby("CONVERSATION ID"):
         parts = {}
@@ -212,12 +216,16 @@ def load_messages():
         (url, nm), = others.items()
         s = stats[url]
         s["name"] = s["name"] or nm
-        for _, r in g.iterrows():
-            s["from_me" if r["SENDER PROFILE URL"] == me else "from_them"] += 1
+        for _, r in g.sort_values("DATE").iterrows():
+            mine = r["SENDER PROFILE URL"] == me
+            s["from_me" if mine else "from_them"] += 1
             d = r["DATE"]
             if pd.notna(d):
                 s["first"] = d if s["first"] is None or d < s["first"] else s["first"]
-                s["last"] = d if s["last"] is None or d > s["last"] else s["last"]
+                if s["last"] is None or d >= s["last"]:
+                    s["last"], s["last_from_me"] = d, mine
+                    # my messages since their last one (a pitch left hanging shows up here)
+                    s["unanswered"] = s["unanswered"] + 1 if mine else 0
     meta = {"my_url": me, "conversations": int(df["CONVERSATION ID"].nunique()),
             "skipped_group_or_system": skipped_group}
     return meta, dict(stats)
@@ -248,6 +256,9 @@ def load_google():
                 "title": r.get("Organization Title") if isinstance(r.get("Organization Title"), str) else "",
                 "emails": emails, "g_saved": saved,
                 "g_phone": saved and any(isinstance(r.get(c), str) and r.get(c).strip() for c in pcols),
+                # the country calling code only; the number itself is never kept
+                "phone_cc": next((history.phone_cc(v) for c in pcols for v in str(r.get(c) or "").split(":::")
+                                  if history.phone_cc(v)), ""),
                 "g_other": not saved, "named": bool(name),
             })
     # merge rows sharing an email (a person can sit in both lists)
@@ -261,6 +272,7 @@ def load_google():
             hit["g_saved"] |= p["g_saved"]
             hit["g_phone"] |= p["g_phone"]
             hit["g_other"] |= p["g_other"]
+            hit["phone_cc"] = hit["phone_cc"] or p["phone_cc"]
             hit["emails"] |= p["emails"]
             if not hit["named"] and p["named"]:
                 hit["name"], hit["named"] = p["name"], True
@@ -272,7 +284,8 @@ def load_google():
 
 def load_calendar(today):
     since = today - timedelta(days=LOOKBACK_DAYS)
-    per = defaultdict(lambda: {"count": 0, "last": None, "display": ""})
+    per = defaultdict(lambda: {"count": 0, "last": None, "display": "", "biz_last": None, "topic": "", "next": None,
+                               "personal": 0})
     events = 0
     seen = set()
     for f in sorted(glob.glob(os.path.join(DATA, "calendar", "*.json"))):
@@ -289,16 +302,29 @@ def load_calendar(today):
                 continue
             st = e.get("start", {})
             d = pd.to_datetime(st.get("dateTime") or st.get("date"), utc=True, errors="coerce")
-            if pd.isna(d) or d.to_pydatetime() < since or d.to_pydatetime() > today + timedelta(days=1):
+            if pd.isna(d) or d.to_pydatetime() < since:
                 continue
-            events += 1
+            # the title is classified in memory into a label; the title itself is never stored
+            kind, topic = history.meeting_kind(e.get("summary")), history.topic_of(e.get("summary"))
+            upcoming = today + timedelta(days=1) < d.to_pydatetime() <= today + timedelta(days=14)
+            if d.to_pydatetime() > today + timedelta(days=1) and not upcoming:
+                continue
+            events += not upcoming
             for a in others:
                 if a.get("responseStatus") == "declined":
                     continue
                 s = per[a["email"].lower()]
-                s["count"] += 1
                 s["display"] = s["display"] or a.get("displayName", "")
+                if upcoming:
+                    if kind == "business":
+                        s["next"] = d if s["next"] is None or d < s["next"] else s["next"]
+                    continue
+                s["count"] += 1
                 s["last"] = d if s["last"] is None or d > s["last"] else s["last"]
+                if kind == "personal":
+                    s["personal"] += 1
+                elif s["biz_last"] is None or d > s["biz_last"]:
+                    s["biz_last"], s["topic"] = d, topic
     return events, dict(per)
 
 
@@ -425,6 +451,10 @@ def mask(e):
 
 # ---------------------------------------------------------------- main
 
+AMBIGUOUS_COLS = ["name", "company", "title", "tier", "outcome", "outcome_intent", "outcome_date", "outcome_source",
+                  "outcome_confidence", "evidence_outcomes", "company_status", "last_business_date",
+                  "last_business_topic"]
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -433,6 +463,8 @@ def main():
     ap.add_argument("--today", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     ap.add_argument("--lookback-days", type=int, default=730)
     ap.add_argument("--max-attendees", type=int, default=8)
+    ap.add_argument("--history", action="store_true",
+                    help="add the relationship-history layer (config section \"history\"; see history.py)")
     args = ap.parse_args()
     global DATA, MY_EMAILS, SELF_NAMES, SELF_RE, LOOKBACK_DAYS, MAX_MEETING_ATTENDEES, FS_PATTERN, FS_EXCLUDE
     DATA, LOOKBACK_DAYS, MAX_MEETING_ATTENDEES = args.data_dir, args.lookback_days, args.max_attendees
@@ -466,6 +498,7 @@ def main():
         p["src"].add("li_messages")
         p["li_msgs_from_me"], p["li_msgs_from_them"] = s["from_me"], s["from_them"]
         p["li_first_msg"], p["li_last_msg"] = s["first"], s["last"]
+        p["li_last_from"], p["li_unanswered"] = ("me" if s["last_from_me"] else "them"), s["unanswered"]
 
     # 2. Hand tags (keyed by LinkedIn URL)
     aug = load_tags()
@@ -521,6 +554,7 @@ def main():
         p["g_saved"] = p.get("g_saved", False) or g["g_saved"]
         p["g_phone"] = p.get("g_phone", False) or g["g_phone"]
         p["g_other"] = p.get("g_other", False) or g["g_other"]
+        p["phone_cc"] = p.get("phone_cc") or g["phone_cc"]
         if method and not p.get("match_method"):
             p["match_method"], p["match_confidence"] = method, conf
         p["company"] = p["company"] or g["company"]
@@ -546,6 +580,8 @@ def main():
                 break
             if conf == "low" and low is None:
                 low = (cand, method, ids)
+        if p is None and not c["count"]:
+            continue  # only in an upcoming meeting: not relationship evidence on its own
         if p is None and low:
             review.append({"source": "calendar", "source_name": low[0], "source_emails": e, "method": low[1], "merged": "N",
                            "candidates": " || ".join(f"{people[i]['name']} ({people[i]['company']}) {people[i]['linkedin_url']}" for i in low[2])})
@@ -559,7 +595,12 @@ def main():
         p["emails"].add(e)
         p["src"].add("calendar")
         p["cal_meetings"] = p.get("cal_meetings", 0) + c["count"]
-        p["cal_last"] = max(filter(None, [p.get("cal_last"), c["last"]]))
+        p["cal_last"] = max(filter(None, [p.get("cal_last"), c["last"]]), default=None)
+        p["cal_personal"] = p.get("cal_personal", 0) + c["personal"]
+        if c["biz_last"] is not None and (p.get("cal_biz_last") is None or c["biz_last"] > p["cal_biz_last"]):
+            p["cal_biz_last"], p["cal_topic"] = c["biz_last"], c["topic"]
+        if c["next"] is not None:
+            p["cal_next"] = min(filter(None, [p.get("cal_next"), c["next"]]))
 
     # 5. Flatten, score, write
     rows = []
@@ -572,16 +613,19 @@ def main():
             "li_connected_on": p["li_connected_on"].strftime("%Y-%m-%d") if p.get("li_connected_on") is not None and pd.notna(p["li_connected_on"]) else "",
             "li_msgs_from_me": fm, "li_msgs_from_them": ft, "li_two_way": "Y" if fm and ft else "N",
             "li_first_msg": p.get("li_first_msg"), "li_last_msg": p.get("li_last_msg"),
+            "li_last_from": p.get("li_last_from", ""), "li_unanswered": p.get("li_unanswered", 0),
             "g_saved_contact": "Y" if p.get("g_saved") else "N", "g_has_phone": "Y" if p.get("g_phone") else "N",
             "g_other_contact": "Y" if p.get("g_other") else "N",
             "cal_meetings": p.get("cal_meetings", 0), "cal_last_meeting": p.get("cal_last"),
+            "cal_biz_last": p.get("cal_biz_last"), "cal_topic": p.get("cal_topic", ""), "cal_next": p.get("cal_next"),
+            "cal_personal": p.get("cal_personal", 0), "phone_cc": p.get("phone_cc", ""),
             "tag": p.get("tag", ""), "sources": ";".join(sorted(p["src"])),
             "match_method": p.get("match_method", ""), "match_confidence": p.get("match_confidence", ""),
             "fs_company": "Y" if isinstance(p["company"], str) and FS_PATTERN.search(p["company"])
                                 and not FS_EXCLUDE.search(p["company"]) else "N",
         }
         r["score"], r["breakdown"], r["tier"] = score(r, today)
-        for k in ("li_first_msg", "li_last_msg", "cal_last_meeting"):
+        for k in ("li_first_msg", "li_last_msg", "cal_last_meeting", "cal_biz_last", "cal_next"):
             r[k] = r[k].strftime("%Y-%m-%d") if r[k] is not None and pd.notna(r[k]) else ""
         rows.append(r)
     df = pd.DataFrame(rows)
@@ -589,6 +633,10 @@ def main():
     df = df[~df["name"].map(norm_name).isin(SELF_NAMES) & ((df["linkedin_url"] != my_url) | (my_url == ""))]
     df["last_evidence"] = df[["li_last_msg", "cal_last_meeting"]].max(axis=1)
     df = df.sort_values(["score", "last_evidence"], ascending=False).drop(columns="last_evidence")
+    hist = None
+    if args.history:
+        df, amb, hist = history.apply(df, DATA, cfg.get("history", {}), today, is_self)
+        amb[AMBIGUOUS_COLS].to_csv(os.path.join(DATA, "history_ambiguous.csv"), index=False)
     df.to_csv(os.path.join(DATA, "roster.csv"), index=False)
     df.drop(columns=["emails"]).to_csv(os.path.join(DATA, "roster_sheet.csv"), index=False)
     pd.DataFrame(review).to_csv(os.path.join(DATA, "match_review.csv"), index=False)
@@ -609,6 +657,8 @@ def main():
         "source_contribution": {s: int(df["sources"].str.contains(s).sum()) for s in
                                 ("li_connection", "li_messages", "g_contacts", "g_other", "calendar", "tags")},
     }
+    if hist:
+        summary["history"] = hist
     json.dump(summary, open(os.path.join(DATA, "roster_summary.json"), "w"), indent=1, default=str)
     print(json.dumps(summary, indent=1, default=str))
 
