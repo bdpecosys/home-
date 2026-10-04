@@ -398,10 +398,16 @@ def apply(df, data_dir, hcfg, today, is_self):
         "sprint_sends": load_sprints([p(x) for x in hcfg.get("sprint_workbooks", []) if os.path.exists(p(x))], ev),
         "gmail_counterparts": load_gmail(p(hcfg.get("gmail_dir", "gmail")), is_self, ev, today),
     }
-    overrides = set()
+    overrides, notes = set(), {}
     if os.path.exists(p(hcfg.get("overrides", "history_overrides.csv"))):
         o = pd.read_csv(p(hcfg.get("overrides", "history_overrides.csv")), dtype=str).fillna("")
         overrides = {f"{t}:{norm(k) if t == 'name' else k.lower()}" for t, k in zip(o.key_type, o.key)}
+        # optional columns: "company" (the person moved; replaces the export's company) and "note" (e.g. a route)
+        for _, x in o[o.key_type == "name"].iterrows():
+            notes[norm(x.key)] = (x.get("company", ""), x.get("note", ""))
+        df = df.copy()
+        moved = df["name"].map(lambda n: notes.get(norm(n), ("", ""))[0])
+        df.loc[moved != "", "company"] = moved[moved != ""]
     hq = []
     if os.path.exists(p(hcfg.get("company_hq", "company_hq.csv"))):
         for _, r in pd.read_csv(p(hcfg.get("company_hq", "company_hq.csv")), dtype=str).fillna("").iterrows():
@@ -416,7 +422,7 @@ def apply(df, data_dir, hcfg, today, is_self):
         x = {k: (v if isinstance(v, str) or pd.notna(v) else "") for k, v in r.items()}
         cc = str(x.get("phone_cc", "") or "")
         geo, geo_src = geo_of(r, hq, cc)
-        row = {"phone_cc": cc, "geo": geo, "geo_source": geo_src}
+        row = {"phone_cc": cc, "geo": geo, "geo_source": geo_src, "history_note": notes.get(norm(r["name"]), ("", ""))[1]}
         if r.tier not in ("WARM", "KNOWN"):
             row.update(outcome="", history_tier=r.tier)
             out.append(row)
