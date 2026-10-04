@@ -193,4 +193,5 @@ Verdict: <direction>, because <reason>. Yield check: <doors → expected rows>.
 - `scripts/build_roster.py`: stage 0. `--data-dir`, `--config`, `--today`, `--lookback-days`, `--max-attendees`.
 - `scripts/count_doors.py`: stage 2 doors line from the roster and a directions config.
 - `scripts/in_motion_scan.py`: stage 4 gate 1, candidate companies and surnames against every tab of the pipeline and sprint workbooks.
+- `scripts/reconnection_pool.py`: weekly reconnection instrument (pool, gates, rank, supply per geography). Rules and the pre-registered test are in `sprint/spec.md`.
 - `scripts/roster_config.example.json`: copy it to `data/roster_config.json` and fill it in.

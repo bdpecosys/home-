@@ -137,3 +137,49 @@ Record with it:
 - **Pass/fail (pre-registered):** 10–15 sends Oct 11–15. By Oct 29: ≥5 replies, ≥3 conversations, ≥4 companies offered. By Nov 14: ≥1 discovery meeting. The IL and SEA slices have separate thresholds.
 - **Result:** 5 rows is below the 10-send floor, so the test cannot run as registered. Re-open bucket: 1 (news only). Doors to build: US, UK, DACH, GCC.
 - **Lesson:** the binding constraint is need-signal companies (4 IL, 3 SG sourced), not doors. Supply of warm, not-in-motion, signal-backed doors is under 10 per sprint, so outreach moves to three instruments: weekly reconnection, signal alerts, one-to-many.
+
+## Instrument: weekly reconnection (from 2026-10-04)
+*Set up after run #3 found fewer than 10 warm, not-in-motion, signal-backed doors per sprint. This is not a pitch: the goal is to restart real relationships so needs surface on their own.*
+
+- **Pool:** WARM-fresh, plus KNOWN people who are senior at fintech/payments/FS companies or are connectors (VC, Big 4, law, banks, hubs, platform partner managers). Read from the latest warm-roster sheet; the roster is not rebuilt for this.
+- **Exclude:** anyone in motion (roster outcome or company status active, referral partners); anyone contacted or excluded in runs #1–3; anyone Amos emailed in the last 90 days (Gmail sent check on the shortlist); WARM-stalled; Micha's accounts; Cal competitors.
+- **Batch:** 10 a week. At least 3 outside Israel, from the non-Israel geography with the most supply. Rank = warmth + seniority (0–3), ties broken by FS/connector relevance. No signal gate; a dated signal, if one exists, is the hook.
+- **Message:**
+  - ≤60 words;
+  - a personal opener grounded in the history, naming the type of evidence only (never quoting message content);
+  - one line: since leaving PwC I run BD Partners, which helps fintech/payments companies enter new markets;
+  - one specific question about them (their 2027 plans, a market they're looking at, who they see expanding);
+  - no meeting ask, and no naming Thunes or Cal;
+  - Hebrew when the history is in Hebrew.
+- **Channel:** WhatsApp if a phone is saved, else email if a thread exists, else LinkedIn.
+- **Log:** Google Sheet "Reconnection log" in Drive › customers and pipeline. One tab per week (`week-1`, `week-2`, …): name, company, geo, tier, history label, hook, channel, draft, sent date, reply date, outcome (chat / need surfaced / intro offered / none).
+- **Script:** `.claude/skills/bdp-outreach-sprint/scripts/reconnection_pool.py` (pool, gates, rank, supply per geography). Names for the exclusions live in a gitignored config.
+
+### Definitions (fixed before the first send)
+- **Reply:** any response from the person within 14 days of the send, on any channel.
+- **Real conversation:** a call or meeting, or a written exchange of at least 3 substantive turns about their work or plans. Pleasantries and a thumbs-up don't count.
+- **Need surfaced:** the person names a concrete need (theirs or a company they name) that BD Partners could serve: a market they plan to enter, a partner or distributor they are looking for, or a BD gap.
+- **Intro offered:** the person offers to connect Amos with a named person or company.
+
+### Pre-registered test (2026-10-04, before any send)
+- **Test:** 4 weekly batches of 10 = 40 sends. Week 1 sends from 2026-10-05; week 4 batch sent by 2026-11-01.
+- **Pass by 2026-11-15 (last send + 14 days), all three:**
+  - reply rate ≥40% (≥16 of 40);
+  - ≥4 real conversations;
+  - ≥2 needs surfaced or intros offered (combined).
+- **If it fails:**
+  - replies ≥40% but 0 needs or intros surfaced → the question is wrong; rewrite it before week 5;
+  - reply rate <20% (<8 of 40) → the pool's warmth is overstated; re-check the roster tiers before week 5;
+  - reply rate 20–39% → inconclusive on warmth; keep the question, look at reply rate by evidence type (LinkedIn thread / call / email) and by geography.
+- **Interim read (no decision):** week-1 replies by 2026-10-19.
+- Thresholds may be revised only before the first send, with the reason logged here.
+
+### Week 1 — 2026-10-04
+- **Pool (after gates, before the per-person Gmail check):** 442: Israel 288, Singapore/SEA 58, unknown geography 57, other 16, UK 7, DACH 6, US 6, India 2, rest of EU 2. 167 of 442 are FS or connectors.
+- **Supply at 10 a week:** about 44 weeks in total. The 3 foreign slots draw on SG/SEA, about 19 weeks at 3 a week. UK, US and DACH have under one week each.
+- **KNOWN coverage gap:** the roster sheet carries only the 121 KNOWN in-sector rows, not all 10,426 KNOWN. KNOWN connectors outside the in-sector list (most VC, law and hub people) are not in the pool. Supply of KNOWN connectors is understated.
+- **Batch:** 10 rows (6 Israel, 1 UK, 3 SG/SEA). All WARM-fresh, all WhatsApp (saved phone), 4 in Hebrew. 1 of 10 has a dated hook. Gmail sent check: 0 of 10 emailed since 2026-07-06. WhatsApp history couldn't be checked from here.
+- **Flags for the founder before sending:**
+  - one row was corrected to never-pitched on 2026-10-04, but its email history (Feb–Mar 2026, last message from Amos) reads like a stalled pitch;
+  - one row's language is unknown (booking email only), so it is drafted in English;
+  - two rows are not FS or connectors. They rank by warmth + seniority as specified; the next FS/connector rows are listed as alternates in the session report.
