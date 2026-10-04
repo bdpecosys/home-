@@ -130,3 +130,10 @@ Record with it:
   - WARM doors often sit below the expansion owner, so ask for a pointer;
   - check M&A before drafting.
 - **Skill extraction ahead of its pass test:** the build-eval pass test (run #1 ≥15 sends in 5 days, ≥3 calls in 14) is unmet and still open: 3 sends so far. Extracted on the founder's explicit request, 2026-09-29. Re-check at the run #1 day-10 review, Oct 9. If run #1 fails, the skill stays, but the failure diagnostic is logged against it.
+
+### Run #3 — 2026-10-04
+- **Direction:** CONNECTORS, fixed by the founder. The roster was rebuilt with the relationship-history layer: 388 WARM-fresh, 38 WARM-stalled, 19 WARM-other. Details are in `sprint/run-03.md`.
+- **Funnel:** 78 persona matches → 67 passed the door gate → 22 researched → 5 passed the book and need-signal gates (3 IL, 2 SG/SEA). The foreign geography is SG/SEA, the only one with ≥5 WARM-fresh connectors.
+- **Pass/fail (pre-registered):** 10–15 sends Oct 11–15. By Oct 29: ≥5 replies, ≥3 conversations, ≥4 companies offered. By Nov 14: ≥1 discovery meeting. The IL and SEA slices have separate thresholds.
+- **Result:** 5 rows is below the 10-send floor, so the test cannot run as registered. Re-open bucket: 1 (news only). Doors to build: US, UK, DACH, GCC.
+- **Lesson:** the binding constraint is need-signal companies (4 IL, 3 SG sourced), not doors. Supply of warm, not-in-motion, signal-backed doors is under 10 per sprint, so outreach moves to three instruments: weekly reconnection, signal alerts, one-to-many.

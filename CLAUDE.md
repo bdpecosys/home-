@@ -24,6 +24,7 @@ This repo is the **method library** of BD Partners (bdpartners.co): skills, temp
 - **Pre-registered pass/fail** criteria and dates for every test, set before acting.
 - **Build on demand, not on spec.** Run `bdp-build-eval` before building any tool beyond a one-off script. Skills are extracted from runs that worked.
 - **Constraints:** Amos's laptop is 4GB Windows, so heavy work runs here in the cloud. There's no engineer. Money is tight.
+- **Supply finding (runs #1–3):** warm, not-in-motion, signal-backed doors number fewer than 10 per sprint. Outreach runs as three instruments: weekly reconnection, signal alerts, one-to-many. Not as a 15–20 list.
 
 ## Where things live (Google Drive — use the Drive connector; files are owned by amos@bdpartners.co)
 | What | Drive file ID |
@@ -41,6 +42,8 @@ This repo is the **method library** of BD Partners (bdpartners.co): skills, temp
 | pipeline sheet "bdpartners.co" (tabs sep26-pipe, sep26-connectors) | 1bNhA83ID0eTEYCHW3yQ66gWN1tju2pTBzYvxA9tRHo4 |
 | Outreach sprint #1 sheet (run #1 output) | 1rYkBTiOrj1jkBgWro1NUAhHcbWi2yy5Pa6BqX34CH5g |
 | Aug 31 contact set with Amos's warm/hot tags | 1kXOgZYlPbJdRBxLA9tDuG4QWoZPQwvsJWOjK11Ny2Ys |
+| Outreach sprint #3 sheet (run #3 output: connectors, re-open, test & geography tabs) | 1XBOlVgEAouiRHuzmwa8KgAil8xbKX6cTpL_K5COhPPs |
+| Warm roster — 2026-10-04 (latest roster: outcome labels, WARM-fresh/stalled tiers, geography; no emails) | 1qj-1G55Ogux9j00vxzTeBThU7RwMmEmn36p6SS7sLLs |
 | Output folder "customers and pipeline" | 1ofPQwKk7tyASE_K5BhxvaCpaoOYLZYxU |
 | Raw contact exports: folder "roster-inputs" | search Drive by title |
 
@@ -52,6 +55,6 @@ Large Drive downloads come back as base64 and may be saved to a tool-results fil
 - Write results to Drive as Google Sheets (create_file with text/csv converts automatically). Commit only code and method docs.
 
 ## Key files in this repo
-- `sprint/spec.md`: the outreach-sprint process spec plus the run log (run #1 on 2026-09-27).
+- `sprint/spec.md`: the outreach-sprint process spec plus the run log (runs #1–3). `sprint/run-03.md`: run #3 counts.
 - `.claude/skills/`: bdp-build-eval, bdp-target-screen, bdp-call-prep. The new skill goes to `.claude/skills/bdp-outreach-sprint/`.
 - `context/`: mirrors of the Drive knowledge files, pulled by prompt 0. The repo is the source of truth for method files.
