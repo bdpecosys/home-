@@ -183,3 +183,39 @@ Record with it:
   - one row was corrected to never-pitched on 2026-10-04, but its email history (Feb–Mar 2026, last message from Amos) reads like a stalled pitch;
   - one row's language is unknown (booking email only), so it is drafted in English;
   - two rows are not FS or connectors. They rank by warmth + seniority as specified; the next FS/connector rows are listed as alternates in the session report.
+
+### Protocol revision — 2026-10-05 (after 4 sends; logged per the hard rule)
+- **What happened:** the founder reviewed the week-1 batch and marked 6 of 10 rows as not worth sending:
+  - already in touch: 1;
+  - outside the sector: 1;
+  - unknown stealth company: 1;
+  - not relevant: 1;
+  - company likely dead: 1;
+  - chatted, nothing concrete: 1. This one was sent and replied, so it counts as a reconnection outcome, not a selection error.
+
+  Sends so far: 4 (2026-10-04 to 2026-10-05). 1 reply, outcome "chat".
+- **Cause:** the rank was warmth + seniority, with relevance only as a tie-break. Roster warmth measures past chatter and saved numbers, which mostly reflects the founder's broad startup network rather than fintech books. Three gates were also missing:
+  - the keyword relevance match took "Finance" in a grants consultancy as FS;
+  - nothing checked whether a company is real or still operating;
+  - WhatsApp contact is invisible to the 90-day check.
+- **Changes from week 2:**
+  1. **Relevance is a hard gate, not a tie-break.** A row qualifies only if it is one of:
+     - an FS/payments operator in a senior role;
+     - a connector with a fintech book (VC with fintech portfolio, Big 4 or law FS practice, bank, hub, platform FS lead).
+
+     Excluded: stealth, independent, media, generic consultancies, fractional CFOs.
+  2. **Founder pre-screen.** The gated pool goes to a `pre-screen` tab in the Reconnection log. The founder marks each row keep or skip, with a reason ("already in touch" is a skip reason). Weekly batches draw only from kept rows, ranked by warmth + seniority.
+  3. **Liveness check.** One web search per shortlisted company before drafting.
+  4. **Company-level in-motion gate widened.** Companies excluded as in motion in runs #2–3 are excluded too, not only companies listed there (Nayax, Mastercard and Papaya caught on 2026-10-05).
+- **Thresholds unchanged.** 40 sends, with pass by 2026-11-15 at a reply rate of at least 40%, at least 4 real conversations, and at least 2 needs or intros surfaced. The 4 sends already made count toward the 40. The week-4 date moves only if the pre-screen leaves fewer than 36 kept rows.
+- **Added selection-quality check:** the founder rejects at most 20% of each week's batch at review. Week 1: 60% (6 of 10), a fail.
+- **Pool after the new gates (before the founder pre-screen):** 104 rows:
+  - Israel 47, unknown 33, SG/SEA 12, other 4, DACH 3, UK 2, US 2, India 1;
+  - 86 FS operators and 18 connectors.
+
+  Only 24 of the 104 are WARM-fresh; 80 are KNOWN, meaning a LinkedIn connection with no conversation on file. A KNOWN row is a first real conversation, not a reconnection, and its draft needs a different opener.
+- **Supply consequence:**
+  - WARM-fresh and relevant: 24, about 2.5 weeks at 10 a week;
+  - SG/SEA: 12, about 4 weeks at 3 foreign slots a week.
+
+  From week 3 the batch either takes KNOWN-senior rows with a first-contact opener, or shrinks below 10 a week.
