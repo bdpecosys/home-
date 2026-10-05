@@ -219,3 +219,4 @@ Record with it:
   - SG/SEA: 12, about 4 weeks at 3 foreign slots a week.
 
   From week 3 the batch either takes KNOWN-senior rows with a first-contact opener, or shrinks below 10 a week.
+- **Pre-screen tab live (2026-10-05):** the 104 rows are in the `pre-screen` tab of the Reconnection log, ranked by warmth + seniority, with keep/skip and skip-reason dropdowns. 10 rows carry a company-history note (run #2 M&A or hold, or a stalled thread). The week-2 batch is drawn only from rows marked keep.
