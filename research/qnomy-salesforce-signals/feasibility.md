@@ -1,67 +1,64 @@
 # Feasibility: "Salesforce migration" signals for Qnomy
 
+Version 2, 7 Oct 2026. The first pass was search-only. This pass had direct web access: curl, headless Chromium and the Legistar Web API.
+
 ## Hit rate
 
-| Stage | Count |
-|---|---|
-| Distinct candidate organisations examined | 15 (CA DMV, Rush, BCU, PenFed, Sunnyvale, Austin, Texas Tech, TAMU Mays, VA, SF BCDC, Victoria DGS, NSW DCJ, WV DMV, NC DMV, Sacramento County 311) |
-| Passed "Salesforce scope + named SI" | 6 (CA DMV, Rush, BCU, PenFed, Sunnyvale, SF BCDC) |
-| Also in segment, with two sources (one dated) | 3 (CA DMV, Rush, BCU) |
-| **Of those, booking/queue status classified with evidence** | **1 (CA DMV, Qmatic; currency unconfirmed)**. Rush is partially classified (Epic MyChart booking, no queue vendor seen). BCU is unclassified. |
-| Clean "first move onto Salesforce in 2026" | **0**. All three are 2020–2025 programmes expanding or entering a new phase in 2026. |
-| ANZ | 0 verified (2 planning-stage leads without an SI) |
+| Stage | Pass 1 (search only) | Pass 2 (web access) |
+|---|---|---|
+| Organisations examined | 15 | 18 (adds San José, Sunnyvale and Infinite Solutions' DMV work via Legistar and contract records) |
+| Salesforce scope + named SI | 6 | 7 |
+| + 2026-dated source + in segment | 3 | 4 (CA DMV, BCU, San José, Rush on the margin) |
+| + booking/queue status **verified on the live site** | 0 | **2** (CA DMV = Qmatic; BCU = Salesforce Scheduler) |
+| **High confidence** | 0 | **2**, plus 1 Medium-High (San José) |
+| Migration in process | — | **2** (CA DMV DL phase, FY2026-27; San José CRM build, 2025–28) |
 
-Verified yield is about 20% of candidates (3/15). Fully complete (classified) yield is about 7% (1/15). Run time was roughly 2.5 hours, search-only.
+Strict yield is 2 high-confidence signals out of 18 examined (about 11%), or 3 counting San José. ANZ is still 0.
 
 ## What worked
-- **SI and vendor case studies** (PwC, Glance, Salesforce customer stories). These are the fastest way to get "org + SI + scope" in one hit, and the SI's own page is a genuinely independent second source.
-- **State budget documents** (CA Dept. of Finance BCPs). Dated, specific, and they name the phase, the budget and the problems (cancelled DL solicitation). This is the best "planning or in process" evidence type, and partners rarely read them.
-- **Old procurement news on the incumbent** (Qmatic CCFMAS). Pairing the "new CRM" signal with the "old queue contract" signal is where the actual insight comes from.
-- **Third-party vendor press releases** (Glance + BCU). They date the move and corroborate it without relying on Salesforce marketing.
+1. **State budget and IT-oversight documents** (CA Department of Finance BCPs, CDT Special Project Reports). These were the best single source. They are dated and signed, and they name the phase, budget, SIs, procurement strategy and **the legacy systems to be replaced**. That is how CCFMAS/Qmatic was found inside the CA DMV Salesforce scope.
+2. **Live page-source and rendered-page checks.** These settled the booking/queue question in seconds where they worked:
+   - `qmatic.cloud` tenant at CA DMV;
+   - Lightning Scheduler objects on BCU's booking page.
+
+   A static curl is not enough for Salesforce Experience Cloud pages. A headless browser that logs network responses is needed.
+3. **Legistar Web API** (`webapi.legistar.com/v1/{client}/matters`, filtered on "Salesforce" in the title). It surfaced council awards that name the SI, with the full staff memo attached: San José and Sunnyvale. Coverage is partial, because many clients don't expose the API.
+4. **Following the SI.** Infinite Solutions appeared in both San José and CA DMV. Mapping an SI's public-sector clients is a cheap way to find adjacent signals, and it gives a single warm path to several prospects, as the Shopify-agency method did.
+5. **Job posts.** One posting (San José CX Transformation Manager, Mar 2026) was enough to date an in-process build.
 
 ## What didn't work
-- **Generic searches** ("credit union selects Salesforce 2026", "health system goes live Health Cloud"). They return partner listicles and SEO content, not named organisations.
-- **Procurement aggregators** (HigherGov, govly, starbridge, govdash). Good for **RFPs**, which name the org but not the SI, because there's no award yet. Awards that name SIs are scattered across council minutes (Legistar), which were blocked here.
-- **ANZ.** AusTender, Buy NSW and Buying for Victoria surface licence contracts with Salesforce itself, not SI awards. Search engines index the content poorly.
-- **Booking-vendor classification by search.** Search engines don't expose page source, and vendors rarely publish named customer logos in this category. **This step needs page-source or Wayback access**, which this environment blocked. With that access it's a few minutes per org: view the source of the "book an appointment" page and grep for qmatic, jrni, engageware or timetrade.
-- **Event verification for 2027.** Most exhibitor and speaker lists for Nov 2026 – Jun 2027 are not published yet. Only 1 of 6 events could show the prospect as listed.
+- **The Internet Archive** refused connections from this environment (connection reset / 429), so no switch could be dated from snapshots. Retrying from another network, at a polite rate, should fix this.
+- **qnomy.com** returns 403 to scripts, so the exclusion check relied on the ACF and Infina sites and search.
+- **Some city sites are behind bot walls** (penfed.org returned a stub to curl). A rendered browser usually got through. When it didn't, I stopped rather than work around it.
+- **Contract aggregators** (Starbridge, HigherGov) render client-side and cover only a sample. They are useful for leads but weak as evidence.
+- **ANZ.** No equivalent of BCP/SPR documents or Legistar was found in the time available. AusTender lists licence contracts with Salesforce itself, not SI awards.
 
 ## Main failure modes
-1. **The "2026 move" definition is too narrow for this market.** Public-sector, health and credit-union Salesforce programmes are multi-year and phased. Hardly anyone does a press-released switch in a single year the way Shopify replatforms do. The workable signal is "**a new phase or new customer-facing scope starting**," not "migrated."
-2. **The SI is usually invisible until the award**, and awards sit in council minutes, state contract registers and case studies published 6–18 months after go-live. So the signal is either early (RFP, no SI) or late (case study, the decision has already been made).
-3. **The classification step needs live-site access.** Without it, two of three signals can't say whether they are whitespace, displacement or a Salesforce Scheduler play, and that is the part that makes the pitch specific.
-4. **Salesforce marketing inflates the "new."** Customer stories don't date themselves and are often re-skins of older projects.
-5. **Exclusion checks need the Qnomy, ACF and Infina customer pages**, which were blocked. Exclusion was only checked by search (it surfaced BECU and Texas Tech FCU as Qnomy customers).
+1. **Unnamed incumbents.** Cities often buy queue kiosks as small purchases that never reach council (San José). The site shows a kiosk but no vendor.
+2. **SI not yet chosen.** The best "planning" signals (CA DMV's DL phase) don't yet have an SI. That's an opening, but it means naming the *previous* SI as the warm path.
+3. **Signal age.** Salesforce stories and case studies are undated or lag go-live by 6–18 months. Budget documents and job posts are the reliable dated sources.
+4. **Coverage.** The Legistar API only covers clients that expose it. Other councils use BoardDocs, CivicClerk or Granicus video archives, which need separate handling.
 
-## Repeatability (monthly, per territory?)
-- **US: yes, as a semi-automated monthly sweep, if you have web access.** Feeds that would work:
-  - (a) state budget and IT project-tracking portals for DMV and agency CRM phases (CA, TX, NY ITS, etc.);
-  - (b) Legistar and BoardDocs searches for "Salesforce" plus "agreement," which give city and county awards with the SI named;
-  - (c) new Salesforce customer stories filtered by industry;
-  - (d) case-study pages of about 15 SIs (Deloitte, Accenture/NeuraFlash, PwC, Slalom, Huron, Coastal Cloud, Cloud for Good, Catalyst, HCLTech…);
-  - (e) a page-source check on each hit.
+## Repeatability (monthly, per territory)
+**US: yes.** This version of the method is repeatable and partly automatable:
+1. **Monthly Legistar API sweep** (about 100 large cities and counties) for "Salesforce", "CRM", "311", "queue" and "appointment" in matter titles. Pull the staff memos and extract the SI, scope and timeline.
+2. **State budget/IT trackers**: CA (BCP and CDT project tracking), TX DIR, NY ITS, WA OCIO, and similar. Search for "Salesforce" and "customer flow" / "appointment" / "queue" in new documents. Budget cycles concentrate these in Jan–Feb and May–June.
+3. **SI follow-the-thread**: for each SI found, search its other public-sector and credit-union clients.
+4. **Live-site classification** with a headless browser and a regex for qmatic, jrni, engageware, timetrade, qminder, qless, wavetec, qflow, `lightningscheduler`/`ServiceAppointment`, calendly and bookings.
+5. **Event check** against the PSN, GovTech, AAMVA and league speaker pages.
 
-  Realistic yield: 2–4 qualified signals per month in the US, mostly "phase or expansion" signals.
-- **ANZ: weak.** It needs direct tender-portal scraping (within terms of service) and LinkedIn/job-post corroboration. Expect perhaps 0–1 a month.
-- **Effort:** about 3–4 hours per territory per month once the source list is set up. Classification and event checks are the manual part.
+Expected yield is 2–4 high-confidence US signals a month, with about 4–6 hours of analyst time once scripted. **ANZ: not yet.** It needs a source equivalent to Legistar and BCPs (state budget papers, council meeting minutes), which this pass didn't find.
 
 ## Verdict: is "we find what partners don't see" defensible?
 
-**Partly, and not with this sample as it stands.**
+**Yes, now with a concrete example, but phrase it as a method, not as volume.**
 
-- **Defensible:** the *combination* is the edge. In CA DMV, a Salesforce programme whose next phase (driver licences) is being re-procured sits on top of a roughly 10-year-old Qmatic queue contract. That link is only visible by reading a state budget document alongside an old procurement article. Neither is a press release. ACF probably knows CA DMV exists, but probably doesn't know the timing or that Deloitte is the door.
-- **Not defensible yet:**
-  - (1) None of the three is a clean "2026 replacement."
-  - (2) Two of three lack an evidenced booking/queue status, which is the piece that makes a signal actionable for Qnomy.
-  - (3) BCU and Rush come from Salesforce/SI marketing, which *is* visible to everyone, including ACF and Infina.
-  - (4) No event is verified for BCU or Rush.
+- **CA DMV is the proof.** The fact that Qmatic's customer-flow system (CCFMAS) is scheduled for replacement inside a Salesforce programme is in a 54-page state IT oversight report and a budget request, not in any press release. The DL phase that carries it is being re-procured in smaller modules in 2026-27, so the window is open now. Pair that with a live Qmatic signature and an event in the window where both DMV owners are speakers.
+- **BCU shows the classification step works**: Salesforce Scheduler is confirmed from the live booking page, which leads straight to an AppExchange pitch.
+- **San José shows the "in-process" pipeline works** (council memo plus job post), and the shared SI (Infinite Solutions) shows the warm-path angle.
 
-**Recommendation for the call:** don't promise "opportunities your partners don't see" as a volume claim. Promise a **method with one worked example**: CA DMV (Salesforce DL phase + Qmatic incumbent + Deloitte as SI + an event where the DMV is a listed speaker). Before the call:
-- re-run the classification step for BCU, PenFed and Rush with live-site access (about 30 minutes);
-- confirm Qmatic is still in place at CA DMV.
-
-If two of the three come back as displacement or whitespace with evidence, the claim stands up at "2–3 a month."
+**Caveat for the call:** Salesforce and SI press (BCU, Rush) *is* visible to ACF and Infina. The defensible claim is the **combination**: a dated government document, plus the live-site incumbent, plus the SI path, plus a verified event. Lead with CA DMV.
 
 ## Notes
-- The "attached HTML" method reference was not present in the repo, so this report follows the method as described in the brief.
-- The optional one-page HTML summary was skipped. With only one fully classified signal, a polished summary would overstate the result.
+- The "attached HTML" method reference wasn't in the repo, so the method follows the brief's description.
+- Optional HTML summary: not produced yet. CA DMV is now strong enough to support a one-page version if wanted.
